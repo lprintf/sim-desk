@@ -53,8 +53,8 @@ FROM node:${NODE_VERSION}-bookworm-slim AS node-runtime
 FROM ubuntu:24.04 AS runtime
 ARG MIRROR=official
 ARG CODEX_VERSION=0.145.0
-ARG PLAYWRIGHT_MCP_VERSION=0.0.78
-ARG PLAYWRIGHT_VERSION=1.62.0-alpha-1783623505000
+ARG PLAYWRIGHT_MCP_VERSION=0.0.79
+ARG PLAYWRIGHT_VERSION=1.63.0-alpha-2026-08-05
 
 ENV DEBIAN_FRONTEND=noninteractive \
     NODE_ENV=production \
@@ -68,8 +68,8 @@ COPY --from=node-runtime /usr/local/ /usr/local/
 
 RUN case "$MIRROR" in \
       official) ubuntu_mirror="https://archive.ubuntu.com/ubuntu"; security_mirror="https://security.ubuntu.com/ubuntu"; npm_registry="https://registry.npmjs.org"; playwright_download_host="" ;; \
-      tencent) ubuntu_mirror="https://mirrors.cloud.tencent.com/ubuntu"; security_mirror="$ubuntu_mirror"; npm_registry="https://mirrors.cloud.tencent.com/npm/"; playwright_download_host="https://npmmirror.com/mirrors/playwright" ;; \
-      aliyun) ubuntu_mirror="https://mirrors.aliyun.com/ubuntu"; security_mirror="$ubuntu_mirror"; npm_registry="https://registry.npmmirror.com"; playwright_download_host="https://npmmirror.com/mirrors/playwright" ;; \
+      tencent) ubuntu_mirror="https://mirrors.cloud.tencent.com/ubuntu"; security_mirror="$ubuntu_mirror"; npm_registry="https://mirrors.cloud.tencent.com/npm/"; playwright_download_host="https://registry.npmmirror.com/-/binary/playwright" ;; \
+      aliyun) ubuntu_mirror="https://mirrors.aliyun.com/ubuntu"; security_mirror="$ubuntu_mirror"; npm_registry="https://registry.npmmirror.com"; playwright_download_host="https://registry.npmmirror.com/-/binary/playwright" ;; \
       *) echo "Unsupported MIRROR: $MIRROR (expected official, tencent, or aliyun)" >&2; exit 2 ;; \
     esac \
     && ubuntu_bootstrap="$(printf '%s' "$ubuntu_mirror" | sed 's|^https://|http://|')" \

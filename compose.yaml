@@ -9,8 +9,8 @@ services:
       args:
         MIRROR: ${MIRROR:-official}
         CODEX_VERSION: ${CODEX_VERSION:-0.145.0}
-        PLAYWRIGHT_MCP_VERSION: ${PLAYWRIGHT_MCP_VERSION:-0.0.78}
-        PLAYWRIGHT_VERSION: ${PLAYWRIGHT_VERSION:-1.62.0-alpha-1783623505000}
+        PLAYWRIGHT_MCP_VERSION: ${PLAYWRIGHT_MCP_VERSION:-0.0.79}
+        PLAYWRIGHT_VERSION: ${PLAYWRIGHT_VERSION:-1.63.0-alpha-2026-08-05}
     restart: unless-stopped
     init: true
     environment:
