@@ -31,7 +31,7 @@ SIM_DESK_AUTH_KEY=replace-with-a-long-random-value
 docker compose build
 ```
 
-镜像构建通过 `.env` 中的 `MIRROR` 统一选择 apt 和 npm 源，支持 `official`、`tencent` 和 `aliyun`，默认值为 `official`。
+镜像构建通过 `.env` 中的 `MIRROR` 统一选择 apt、npm 和 Playwright 浏览器下载源，支持 `official`、`tencent` 和 `aliyun`，默认值为 `official`。在阿里云或腾讯云 ECS 上使用 `aliyun`/`tencent` 时，Playwright Chromium 会从国内镜像下载，避免访问 `cdn.playwright.dev` 过慢。
 
 首次使用时在容器的持久化 `CODEX_HOME` 中登录：
 

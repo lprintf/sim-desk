@@ -1,5 +1,3 @@
-# syntax=docker/dockerfile:1.7
-
 ARG NODE_VERSION=22.14.0
 
 FROM node:${NODE_VERSION}-bookworm-slim AS frontend-build
@@ -69,9 +67,9 @@ ENV DEBIAN_FRONTEND=noninteractive \
 COPY --from=node-runtime /usr/local/ /usr/local/
 
 RUN case "$MIRROR" in \
-      official) ubuntu_mirror="https://archive.ubuntu.com/ubuntu"; security_mirror="https://security.ubuntu.com/ubuntu"; npm_registry="https://registry.npmjs.org" ;; \
-      tencent) ubuntu_mirror="https://mirrors.cloud.tencent.com/ubuntu"; security_mirror="$ubuntu_mirror"; npm_registry="https://mirrors.cloud.tencent.com/npm/" ;; \
-      aliyun) ubuntu_mirror="https://mirrors.aliyun.com/ubuntu"; security_mirror="$ubuntu_mirror"; npm_registry="https://registry.npmmirror.com" ;; \
+      official) ubuntu_mirror="https://archive.ubuntu.com/ubuntu"; security_mirror="https://security.ubuntu.com/ubuntu"; npm_registry="https://registry.npmjs.org"; playwright_download_host="" ;; \
+      tencent) ubuntu_mirror="https://mirrors.cloud.tencent.com/ubuntu"; security_mirror="$ubuntu_mirror"; npm_registry="https://mirrors.cloud.tencent.com/npm/"; playwright_download_host="https://npmmirror.com/mirrors/playwright" ;; \
+      aliyun) ubuntu_mirror="https://mirrors.aliyun.com/ubuntu"; security_mirror="$ubuntu_mirror"; npm_registry="https://registry.npmmirror.com"; playwright_download_host="https://npmmirror.com/mirrors/playwright" ;; \
       *) echo "Unsupported MIRROR: $MIRROR (expected official, tencent, or aliyun)" >&2; exit 2 ;; \
     esac \
     && ubuntu_bootstrap="$(printf '%s' "$ubuntu_mirror" | sed 's|^https://|http://|')" \
@@ -114,7 +112,11 @@ RUN case "$MIRROR" in \
         "@openai/codex@${CODEX_VERSION}" \
         "@playwright/mcp@${PLAYWRIGHT_MCP_VERSION}" \
         "playwright@${PLAYWRIGHT_VERSION}" \
-    && playwright install --with-deps chromium \
+    && if [ -n "$playwright_download_host" ]; then \
+         PLAYWRIGHT_DOWNLOAD_HOST="$playwright_download_host" playwright install --with-deps chromium; \
+       else \
+         playwright install --with-deps chromium; \
+       fi \
     && npm cache clean --force
 
 RUN groupadd --gid 1000 codex \
