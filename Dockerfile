@@ -119,12 +119,12 @@ RUN case "$MIRROR" in \
        fi \
     && npm cache clean --force
 
-RUN existing_user="$(getent passwd 1000 | cut -d: -f1 || true)" \
-    && existing_group="$(getent group 1000 | cut -d: -f1 || true)" \
-    && if [ -n "$existing_user" ] && [ "$existing_user" != "codex" ]; then userdel "$existing_user"; fi \
-    && if [ -n "$existing_group" ] && [ "$existing_group" != "codex" ]; then groupdel "$existing_group"; fi \
-    && if ! getent group codex >/dev/null; then groupadd --gid 1000 codex; fi \
-    && if ! id codex >/dev/null 2>&1; then useradd --uid 1000 --gid codex --create-home --shell /bin/bash codex; fi \
+RUN if ! getent group codex >/dev/null; then \
+        if getent group 1000 >/dev/null; then groupadd codex; else groupadd --gid 1000 codex; fi; \
+    fi \
+    && if ! id codex >/dev/null 2>&1; then \
+        if getent passwd 1000 >/dev/null; then useradd --gid codex --create-home --shell /bin/bash codex; else useradd --uid 1000 --gid codex --create-home --shell /bin/bash codex; fi; \
+    fi \
     && mkdir -p \
         /home/codex/.codex \
         /home/codex/.config/sim-desk-browser \
