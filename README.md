@@ -31,7 +31,7 @@ SIM_DESK_AUTH_KEY=replace-with-a-long-random-value
 docker compose build
 ```
 
-镜像构建通过 `.env` 中的 `MIRROR` 选择源，默认值为 `official`。使用自定义源时设置 `MIRROR=custom`，并同时提供 `MIRROR_NPM_URL`、`DEBIAN_APT_MIRROR`、`DEBIAN_SECURITY_MIRROR`、`UBUNTU_APT_MIRROR` 和 `UBUNTU_SECURITY_MIRROR`。
+镜像构建通过 `.env` 中的 `MIRROR` 统一选择 apt 和 npm 源，支持 `official`、`tencent` 和 `aliyun`，默认值为 `official`。
 
 首次使用时在容器的持久化 `CODEX_HOME` 中登录：
 

@@ -4,16 +4,14 @@ ARG NODE_VERSION=22.14.0
 
 FROM node:${NODE_VERSION}-bookworm-slim AS frontend-build
 ARG MIRROR=official
-ARG MIRROR_NPM_URL=
 WORKDIR /build/frontend
 COPY frontend/package.json frontend/package-lock.json ./
 RUN case "$MIRROR" in \
       official) npm_registry="https://registry.npmjs.org" ;; \
-      custom) npm_registry="" ;; \
-      *) echo "Unsupported MIRROR=$MIRROR (expected official or custom)" >&2; exit 2 ;; \
+      tencent) npm_registry="https://mirrors.cloud.tencent.com/npm/" ;; \
+      aliyun) npm_registry="https://registry.npmmirror.com" ;; \
+      *) echo "Unsupported MIRROR: $MIRROR (expected official, tencent, or aliyun)" >&2; exit 2 ;; \
     esac && \
-    npm_registry="${MIRROR_NPM_URL:-$npm_registry}" && \
-    test -n "$npm_registry" && \
     npm config set registry "$npm_registry" && \
     npm ci
 COPY frontend/ ./
@@ -21,12 +19,15 @@ RUN npm run build
 
 FROM node:${NODE_VERSION}-bookworm-slim AS server-deps
 ARG MIRROR=official
-ARG DEBIAN_APT_MIRROR=https://deb.debian.org/debian
-ARG DEBIAN_SECURITY_MIRROR=https://deb.debian.org/debian-security
 WORKDIR /build
-RUN case "$MIRROR" in official|custom) ;; *) echo "Unsupported MIRROR=$MIRROR (expected official or custom)" >&2; exit 2 ;; esac && \
-    debian_bootstrap="$(printf '%s' "${DEBIAN_APT_MIRROR}" | sed 's|^https://|http://|')" \
-    && security_bootstrap="$(printf '%s' "${DEBIAN_SECURITY_MIRROR}" | sed 's|^https://|http://|')" \
+RUN case "$MIRROR" in \
+      official) debian_mirror="https://deb.debian.org/debian"; security_mirror="https://deb.debian.org/debian-security"; npm_registry="https://registry.npmjs.org" ;; \
+      tencent) debian_mirror="https://mirrors.cloud.tencent.com/debian"; security_mirror="https://mirrors.cloud.tencent.com/debian-security"; npm_registry="https://mirrors.cloud.tencent.com/npm/" ;; \
+      aliyun) debian_mirror="https://mirrors.aliyun.com/debian"; security_mirror="https://mirrors.aliyun.com/debian-security"; npm_registry="https://registry.npmmirror.com" ;; \
+      *) echo "Unsupported MIRROR: $MIRROR (expected official, tencent, or aliyun)" >&2; exit 2 ;; \
+    esac \
+    && debian_bootstrap="$(printf '%s' "$debian_mirror" | sed 's|^https://|http://|')" \
+    && security_bootstrap="$(printf '%s' "$security_mirror" | sed 's|^https://|http://|')" \
     && sed -i \
         -e "s|http://deb.debian.org/debian-security|${security_bootstrap}|g" \
         -e "s|http://deb.debian.org/debian|${debian_bootstrap}|g" \
@@ -34,11 +35,12 @@ RUN case "$MIRROR" in official|custom) ;; *) echo "Unsupported MIRROR=$MIRROR (e
     && apt-get update \
     && apt-get install --yes --no-install-recommends ca-certificates \
     && sed -i \
-        -e "s|${security_bootstrap}|${DEBIAN_SECURITY_MIRROR}|g" \
-        -e "s|${debian_bootstrap}|${DEBIAN_APT_MIRROR}|g" \
+        -e "s|${security_bootstrap}|${security_mirror}|g" \
+        -e "s|${debian_bootstrap}|${debian_mirror}|g" \
         /etc/apt/sources.list.d/debian.sources \
     && apt-get update \
     && apt-get install --yes --no-install-recommends g++ make python3 \
+    && npm config set registry "$npm_registry" \
     && rm -rf /var/lib/apt/lists/*
 COPY package.json package-lock.json ./
 RUN npm ci --omit=dev
@@ -55,8 +57,6 @@ ARG MIRROR=official
 ARG CODEX_VERSION=0.145.0
 ARG PLAYWRIGHT_MCP_VERSION=0.0.78
 ARG PLAYWRIGHT_VERSION=1.62.0-alpha-1783623505000
-ARG UBUNTU_APT_MIRROR=https://archive.ubuntu.com/ubuntu
-ARG UBUNTU_SECURITY_MIRROR=https://security.ubuntu.com/ubuntu
 
 ENV DEBIAN_FRONTEND=noninteractive \
     NODE_ENV=production \
@@ -68,9 +68,14 @@ ENV DEBIAN_FRONTEND=noninteractive \
 
 COPY --from=node-runtime /usr/local/ /usr/local/
 
-RUN case "$MIRROR" in official|custom) ;; *) echo "Unsupported MIRROR=$MIRROR (expected official or custom)" >&2; exit 2 ;; esac && \
-    ubuntu_bootstrap="$(printf '%s' "${UBUNTU_APT_MIRROR}" | sed 's|^https://|http://|')" \
-    && security_bootstrap="$(printf '%s' "${UBUNTU_SECURITY_MIRROR}" | sed 's|^https://|http://|')" \
+RUN case "$MIRROR" in \
+      official) ubuntu_mirror="https://archive.ubuntu.com/ubuntu"; security_mirror="https://security.ubuntu.com/ubuntu"; npm_registry="https://registry.npmjs.org" ;; \
+      tencent) ubuntu_mirror="https://mirrors.cloud.tencent.com/ubuntu"; security_mirror="$ubuntu_mirror"; npm_registry="https://mirrors.cloud.tencent.com/npm/" ;; \
+      aliyun) ubuntu_mirror="https://mirrors.aliyun.com/ubuntu"; security_mirror="$ubuntu_mirror"; npm_registry="https://registry.npmmirror.com" ;; \
+      *) echo "Unsupported MIRROR: $MIRROR (expected official, tencent, or aliyun)" >&2; exit 2 ;; \
+    esac \
+    && ubuntu_bootstrap="$(printf '%s' "$ubuntu_mirror" | sed 's|^https://|http://|')" \
+    && security_bootstrap="$(printf '%s' "$security_mirror" | sed 's|^https://|http://|')" \
     && sed -i \
         -e "s|http://archive.ubuntu.com/ubuntu|${ubuntu_bootstrap}|g" \
         -e "s|http://security.ubuntu.com/ubuntu|${security_bootstrap}|g" \
@@ -78,8 +83,8 @@ RUN case "$MIRROR" in official|custom) ;; *) echo "Unsupported MIRROR=$MIRROR (e
     && apt-get update \
     && apt-get install --yes --no-install-recommends ca-certificates \
     && sed -i \
-        -e "s|${security_bootstrap}|${UBUNTU_SECURITY_MIRROR}|g" \
-        -e "s|${ubuntu_bootstrap}|${UBUNTU_APT_MIRROR}|g" \
+        -e "s|${security_bootstrap}|${security_mirror}|g" \
+        -e "s|${ubuntu_bootstrap}|${ubuntu_mirror}|g" \
         /etc/apt/sources.list.d/ubuntu.sources \
     && apt-get update \
     && apt-get install --yes --no-install-recommends \
@@ -104,6 +109,7 @@ RUN case "$MIRROR" in official|custom) ;; *) echo "Unsupported MIRROR=$MIRROR (e
         tini \
         unzip \
     && rm -rf /var/lib/apt/lists/* \
+    && npm config set registry "$npm_registry" \
     && npm install --global \
         "@openai/codex@${CODEX_VERSION}" \
         "@playwright/mcp@${PLAYWRIGHT_MCP_VERSION}" \

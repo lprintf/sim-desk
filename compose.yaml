@@ -8,14 +8,9 @@ services:
       target: runtime
       args:
         MIRROR: ${MIRROR:-official}
-        MIRROR_NPM_URL: ${MIRROR_NPM_URL:-}
         CODEX_VERSION: ${CODEX_VERSION:-0.145.0}
         PLAYWRIGHT_MCP_VERSION: ${PLAYWRIGHT_MCP_VERSION:-0.0.78}
         PLAYWRIGHT_VERSION: ${PLAYWRIGHT_VERSION:-1.62.0-alpha-1783623505000}
-        DEBIAN_APT_MIRROR: ${DEBIAN_APT_MIRROR:-https://deb.debian.org/debian}
-        DEBIAN_SECURITY_MIRROR: ${DEBIAN_SECURITY_MIRROR:-https://deb.debian.org/debian-security}
-        UBUNTU_APT_MIRROR: ${UBUNTU_APT_MIRROR:-https://archive.ubuntu.com/ubuntu}
-        UBUNTU_SECURITY_MIRROR: ${UBUNTU_SECURITY_MIRROR:-https://security.ubuntu.com/ubuntu}
     restart: unless-stopped
     init: true
     environment:
@@ -67,7 +62,6 @@ services:
       target: web
       args:
         MIRROR: ${MIRROR:-official}
-        MIRROR_NPM_URL: ${MIRROR_NPM_URL:-}
     restart: unless-stopped
     depends_on:
       runtime:
