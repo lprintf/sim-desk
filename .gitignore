@@ -1,0 +1,15 @@
+node_modules/
+frontend/node_modules/
+frontend/.next/
+frontend/out/
+.env
+*.log
+
+data/*
+!data/output/
+data/output/*
+!data/output/.gitkeep
+
+workspace/*
+!workspace/.gitkeep
+

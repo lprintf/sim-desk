@@ -1,0 +1,86 @@
+name: sim-desk
+
+services:
+  runtime:
+    image: sim-desk-runtime:local
+    build:
+      context: .
+      target: runtime
+      args:
+        MIRROR: ${MIRROR:-official}
+        MIRROR_NPM_URL: ${MIRROR_NPM_URL:-}
+        CODEX_VERSION: ${CODEX_VERSION:-0.145.0}
+        PLAYWRIGHT_MCP_VERSION: ${PLAYWRIGHT_MCP_VERSION:-0.0.78}
+        PLAYWRIGHT_VERSION: ${PLAYWRIGHT_VERSION:-1.62.0-alpha-1783623505000}
+        DEBIAN_APT_MIRROR: ${DEBIAN_APT_MIRROR:-https://deb.debian.org/debian}
+        DEBIAN_SECURITY_MIRROR: ${DEBIAN_SECURITY_MIRROR:-https://deb.debian.org/debian-security}
+        UBUNTU_APT_MIRROR: ${UBUNTU_APT_MIRROR:-https://archive.ubuntu.com/ubuntu}
+        UBUNTU_SECURITY_MIRROR: ${UBUNTU_SECURITY_MIRROR:-https://security.ubuntu.com/ubuntu}
+    restart: unless-stopped
+    init: true
+    environment:
+      HOST: 0.0.0.0
+      PORT: 3500
+      AUTH_KEY: ${SIM_DESK_AUTH_KEY:?Set SIM_DESK_AUTH_KEY in .env}
+      TRUST_PROXY_HOPS: 1
+      CODEX_HOME: /home/codex/.codex
+      CODEX_WORKSPACE_ROOT: /workspace
+      SIM_DESK_INITIAL_WORKSPACE: /workspace
+      CODEX_MODEL: ${CODEX_MODEL:-}
+      CODEX_SANDBOX: ${CODEX_SANDBOX:-workspace-write}
+      CODEX_APPROVAL_POLICY: ${CODEX_APPROVAL_POLICY:-on-request}
+      CODEX_ACTIVITY_STALE_MS: ${CODEX_ACTIVITY_STALE_MS:-600000}
+      DECK_DATA_DIR: /var/lib/sim-desk
+      DECK_SHELL: /bin/bash
+      PLAYWRIGHT_BROWSERS_PATH: /ms-playwright
+      MINIMAX_API_KEY: ${MINIMAX_API_KEY:-}
+    expose:
+      - "3500"
+    volumes:
+      - type: bind
+        source: ${SIM_DESK_WORKSPACE:-./workspace}
+        target: /workspace
+      - type: bind
+        source: ${SIM_DESK_OUTPUT:-./data/output}
+        target: /workspace/output
+      - type: volume
+        source: codex-home
+        target: /home/codex/.codex
+      - type: volume
+        source: deck-data
+        target: /var/lib/sim-desk
+      - type: volume
+        source: browser-profile
+        target: /home/codex/.config/sim-desk-browser
+    shm_size: 1gb
+    healthcheck:
+      test: ["CMD", "curl", "--fail", "--silent", "--show-error", "http://127.0.0.1:3500/api/healthz"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 20s
+
+  web:
+    image: sim-desk-web:local
+    build:
+      context: .
+      target: web
+      args:
+        MIRROR: ${MIRROR:-official}
+        MIRROR_NPM_URL: ${MIRROR_NPM_URL:-}
+    restart: unless-stopped
+    depends_on:
+      runtime:
+        condition: service_healthy
+    ports:
+      - "${SIM_DESK_BIND_ADDRESS:-0.0.0.0}:${SIM_DESK_PORT:-8000}:8080"
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--spider", "http://127.0.0.1:8080/healthz"]
+      interval: 10s
+      timeout: 5s
+      retries: 6
+
+volumes:
+  codex-home:
+  deck-data:
+  browser-profile:

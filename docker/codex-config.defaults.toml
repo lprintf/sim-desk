@@ -1,0 +1,22 @@
+sandbox_mode = "workspace-write"
+approval_policy = "on-request"
+web_search = "cached"
+
+[mcp_servers.playwright]
+enabled = true
+required = false
+command = "playwright-mcp"
+args = [
+  "--headless",
+  "--caps", "vision,pdf,devtools",
+  "--user-data-dir", "/home/codex/.config/sim-desk-browser",
+  "--output-dir", "/workspace/output/browser",
+  "--output-mode", "file",
+  "--output-max-size", "536870912",
+  "--viewport-size", "1440x900"
+]
+cwd = "/workspace"
+startup_timeout_sec = 30.0
+tool_timeout_sec = 180.0
+default_tools_approval_mode = "writes"
+

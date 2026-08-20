@@ -1,0 +1,29 @@
+{
+  "name": "sim-desk",
+  "version": "0.1.0",
+  "description": "Compose-native mobile development workspace powered by Codex CLI",
+  "main": "server/index.js",
+  "scripts": {
+    "start": "node server/index.js",
+    "dev": "npx concurrently -n BE,FE -c cyan,magenta \"node --watch server/index.js --port 3500 --no-auth\" \"npm run dev --prefix frontend\"",
+    "build:frontend": "npm run build --prefix frontend",
+    "setup": "npm ci && npm ci --prefix frontend && npm run build:frontend",
+    "check": "node --check server/index.js && node --check server/codex/app-server-client.js && node --check server/codex/routes.js && node --check server/codex/deck-compat.js && node --check server/codex/session-activity.js && node --check server/codex/workspace-store.js && node --check server/codex/workspace-tools.js && node --check server/codex/shell-session-manager.js",
+    "test:activity": "node --test server/codex/session-activity.test.js"
+  },
+  "dependencies": {
+    "express": "^4.18.2",
+    "express-rate-limit": "^8.3.1",
+    "helmet": "^8.1.0",
+    "morgan": "^1.10.1",
+    "node-pty": "^1.1.0",
+    "protobufjs": "^8.0.0",
+    "rotating-file-stream": "^3.2.9",
+    "web-push": "^3.6.7",
+    "ws": "^8.16.0",
+    "zod": "^4.3.6"
+  },
+  "devDependencies": {
+    "concurrently": "^9.2.1"
+  }
+}
