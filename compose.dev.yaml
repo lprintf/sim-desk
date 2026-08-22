@@ -1,0 +1,35 @@
+services:
+  runtime:
+    command: ["node", "--watch", "--watch-preserve-output", "server/index.js"]
+    ports:
+      - "127.0.0.1:3510:3500"
+    volumes:
+      - type: bind
+        source: ./server
+        target: /opt/sim-desk/server
+        read_only: true
+
+  frontend-dev:
+    image: sim-desk-frontend-dev:local
+    build:
+      context: .
+      target: frontend-dev
+      args:
+        MIRROR: ${MIRROR:-official}
+    depends_on:
+      runtime:
+        condition: service_healthy
+    environment:
+      WATCHPACK_POLLING: "true"
+    ports:
+      - "127.0.0.1:3000:3000"
+    volumes:
+      - type: bind
+        source: ./frontend
+        target: /app/frontend
+      - type: volume
+        source: frontend-node-modules
+        target: /app/frontend/node_modules
+
+volumes:
+  frontend-node-modules:

@@ -38,6 +38,7 @@ class CodexAppServerClient extends EventEmitter {
         this.nextId = 1;
         this.pending = new Map();
         this.serverRequests = new Map();
+        this.turnErrors = new Map();
         this.loadedThreads = new Set();
         this.readyPromise = null;
         this.stopping = false;
@@ -122,7 +123,6 @@ class CodexAppServerClient extends EventEmitter {
             if (!diagnostic) return;
             this.stderrTail.push(diagnostic);
             if (this.stderrTail.length > 20) this.stderrTail.shift();
-            this.lastError = diagnostic;
             this.emit('stderr', diagnostic);
         });
 
@@ -183,6 +183,14 @@ class CodexAppServerClient extends EventEmitter {
         }));
     }
 
+    decorateThread(thread) {
+        if (!thread?.id || !Array.isArray(thread.turns)) return thread;
+        return {
+            ...thread,
+            turns: thread.turns.map((turn) => this._decorateTurn(thread.id, turn)),
+        };
+    }
+
     async ensureThreadLoaded(threadId) {
         if (this.loadedThreads.has(threadId)) return;
         await this.request('thread/resume', { threadId });
@@ -213,7 +221,49 @@ class CodexAppServerClient extends EventEmitter {
             return;
         }
 
-        if (message.method) this.emit('notification', message);
+        if (message.method) {
+            this._trackTurnError(message);
+            this.emit('notification', message);
+        }
+    }
+
+    _turnKey(threadId, turnId) {
+        return threadId && turnId ? `${threadId}:${turnId}` : '';
+    }
+
+    _decorateTurn(threadId, turn) {
+        if (!turn?.id) return turn;
+        const recorded = this.turnErrors.get(this._turnKey(threadId, turn.id));
+        if (!recorded || turn.error) return turn;
+        const hasAgentMessage = (turn.items || []).some((item) => item.type === 'agentMessage');
+        return {
+            ...turn,
+            status: turn.status === 'completed' && !hasAgentMessage ? 'failed' : turn.status,
+            error: recorded.error,
+        };
+    }
+
+    _trackTurnError(message) {
+        const params = message.params || {};
+        const threadId = params.threadId;
+        const turnId = params.turnId || params.turn?.id;
+        const key = this._turnKey(threadId, turnId);
+        if (!key) return;
+
+        if (message.method === 'error' && params.error) {
+            this.turnErrors.set(key, { error: params.error, willRetry: Boolean(params.willRetry) });
+            if (this.turnErrors.size > 1000) this.turnErrors.delete(this.turnErrors.keys().next().value);
+            return;
+        }
+
+        if (message.method === 'item/completed' && params.item?.type === 'agentMessage') {
+            this.turnErrors.delete(key);
+            return;
+        }
+
+        if (message.method === 'turn/completed' && params.turn) {
+            message.params = { ...params, turn: this._decorateTurn(threadId, params.turn) };
+        }
     }
 
     _write(message) {

@@ -72,7 +72,7 @@ function setupDeckCompatRoutes(app, { client, workspaces, runtimeSettings }) {
             const params = { limit: 100, sortKey: 'updated_at', sortDirection: 'desc' };
             if (cursor) params.cursor = cursor;
             const result = await client.request('thread/list', params);
-            data.push(...(result.data || []));
+            data.push(...(result.data || []).map((thread) => client.decorateThread(thread)));
             cursor = result.nextCursor;
             if (!cursor) break;
         }
@@ -97,7 +97,7 @@ function setupDeckCompatRoutes(app, { client, workspaces, runtimeSettings }) {
     const readThread = async (threadId, includeTurns = true) => {
         const result = await client.request('thread/read', { threadId, includeTurns });
         workspaces.resolve(result.thread.cwd);
-        return result.thread;
+        return client.decorateThread(result.thread);
     };
 
     const listThreads = async (workspace) => {

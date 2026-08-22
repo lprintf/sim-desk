@@ -23,7 +23,7 @@ import {
     DropdownMenuSeparator,
     DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Settings, Folder, Zap, BarChart2, RefreshCcw, SendHorizontal, Square, Paperclip, GitBranch, Terminal, Plus, X, ChevronDown, Activity, Download, Bell, BellOff, Rocket, ArrowDown as ArrowDownIcon, Camera, Brain, Image as ImageIcon, Star } from 'lucide-react';
+import { AlertCircle, Settings, Folder, Zap, BarChart2, RefreshCcw, SendHorizontal, Square, Paperclip, GitBranch, Terminal, Plus, X, ChevronDown, Activity, Download, Bell, BellOff, Rocket, ArrowDown as ArrowDownIcon, Camera, Brain, Image as ImageIcon, Star } from 'lucide-react';
 import { Switch } from '@/components/ui/switch';
 import { notificationService, NOTIFICATION_SETTINGS_CHANGED } from '@/lib/notifications';
 
@@ -38,6 +38,7 @@ interface ChatViewProps {
     currentWorkspace: string | null;
     wsVersion: number;
     cascadeStatus?: string;
+    codexError?: string | null;
     onCascadeCreated: (cascadeId: string) => void;
     onNewConversation: () => void;
     showTimeline: boolean;
@@ -80,9 +81,10 @@ function generateThumbnail(base64: string, mimeType: string, maxSize = 128): Pro
 }
 
 // === Main Chat View ===
-export function ChatView({ steps, baseIndex = 0, stepCount = 0, loadingOlder = false, onLoadOlder, currentConvId, currentWorkspace, wsVersion, cascadeStatus, onCascadeCreated, onNewConversation, showTimeline, onSetShowTimeline, showAnalytics, onToggleAnalytics, onExport, onShowSettings }: ChatViewProps) {
+export function ChatView({ steps, baseIndex = 0, stepCount = 0, loadingOlder = false, onLoadOlder, currentConvId, currentWorkspace, wsVersion, cascadeStatus, codexError, onCascadeCreated, onNewConversation, showTimeline, onSetShowTimeline, showAnalytics, onToggleAnalytics, onExport, onShowSettings }: ChatViewProps) {
     const [input, setInput] = useState('');
     const [sending, setSending] = useState(false);
+    const [sendError, setSendError] = useState<string | null>(null);
     // activeCascadeId: derived from currentConvId, with local override for new chats
     const [localCascadeId, setLocalCascadeId] = useState<string | null>(null);
     const [showSourceControl, setShowSourceControl] = useState(false);
@@ -298,6 +300,7 @@ export function ChatView({ steps, baseIndex = 0, stepCount = 0, loadingOlder = f
         // No need to switch workspace — resolveInst handles routing on backend
 
         setSending(true);
+        setSendError(null);
         // Optimistic update: show user message immediately
         setPendingMessage(text || '(images)');
         // Snapshot images for optimistic rendering before clearing state
@@ -336,6 +339,9 @@ export function ChatView({ steps, baseIndex = 0, stepCount = 0, loadingOlder = f
             setPendingImages([]);
         } catch (e) {
             console.error('Send error:', e);
+            setSendError(e instanceof Error ? e.message : 'Failed to send the message');
+            setPendingMessage(null);
+            pendingMediaRef.current = [];
         } finally {
             setSending(false);
         }
@@ -623,6 +629,15 @@ export function ChatView({ steps, baseIndex = 0, stepCount = 0, loadingOlder = f
                     </div>
 
                     <CodexApprovalPanel threadId={activeCascadeId} />
+
+                    {(sendError || codexError) && (
+                        <div role="alert" className="border-t border-red-500/20 bg-red-500/10 px-3 sm:px-6 py-2.5">
+                            <div className="max-w-4xl mx-auto flex items-start gap-2 text-xs text-red-200">
+                                <AlertCircle className="h-4 w-4 mt-0.5 shrink-0 text-red-400" />
+                                <span className="min-w-0 break-words">{sendError || codexError}</span>
+                            </div>
+                        </div>
+                    )}
 
                     {/* Input bar */}
                     <div className="border-t border-border bg-background/80 backdrop-blur px-2 sm:px-4 py-2 sm:py-3"

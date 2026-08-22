@@ -38,7 +38,7 @@ Codex 官方将 `app-server` 定位为自定义富客户端的集成接口，包
 ```mermaid
 flowchart LR
     M[手机或桌面浏览器]
-    T[TLS 隧道]
+    T[Gateway 反向代理 / TLS]
     N[Nginx Web Gateway]
     D[Deck Node Runtime]
     C[Codex App Server]
@@ -73,7 +73,7 @@ flowchart LR
 - 将 `/api/` 代理到 `runtime:3500`；
 - 将 `/ws/` 以 WebSocket Upgrade 代理到 `runtime:3500`；
 - 提供压缩、缓存头、请求体大小和超时配置；
-- 暴露 Compose 唯一的 HTTP 端口。
+- 加入外部 `gateway` 网络，供反向代理通过 `desk:8080` 访问，不映射宿主端口。
 
 生产镜像应在构建阶段把静态产物复制进 Nginx 镜像。开发环境可以挂载 `frontend/out`，但静态目录挂载不应成为生产部署的必要条件。
 
@@ -168,10 +168,12 @@ ${SIM_DESK_OUTPUT}    -> /workspace/output
 建议流程：
 
 1. 创建并持久化 `codex-home` named volume。
-2. 在容器内执行 Codex 登录。
-3. 从宿主配置中人工迁移模型提供商和通用设置。
+2. 使用 ChatGPT 账号时在容器内执行 Codex 登录；使用 API Key 时通过 runtime 环境注入 `OPENAI_API_KEY`。
+3. 自定义 OpenAI-compatible endpoint 通过 `OPENAI_BASE_URL` 注入，由容器内 wrapper 转换为 Codex 运行时配置。
 4. 把所有 MCP 命令改为容器内命令或 Streamable HTTP URL。
 5. API 密钥通过 Compose secrets 或运行时环境变量注入，不写入镜像和 Git。
+
+wrapper 同时把 `CODEX_MODEL`、`CODEX_SANDBOX` 和 `CODEX_APPROVAL_POLICY` 转换为命令行配置覆盖。这样环境级部署设置无需写入持久化的 `config.toml`，已有 volume 也能在容器重建后立即使用新配置；`config.toml` 继续保存 MCP、技能及用户自行维护的通用设置。
 
 MiniMax、视频生成平台及其他提供商密钥应由相应 MCP/脚本进程按需读取。Deck 前端和 Nginx 均不接触这些密钥。
 
@@ -237,12 +239,14 @@ sim-desk/
 
 Compose 首期只有两个常驻服务：
 
-| 服务 | 对外端口 | 职责 |
+| 服务 | 宿主发布端口 | 职责 |
 |---|---|---|
-| `web` | `3500` | 静态资源、API/WS 反向代理 |
+| `web` | 无 | 静态资源、API/WS 反向代理；监听容器内 `8080` |
 | `runtime` | 无 | Deck Node、Codex App Server、PTY、工具执行 |
 
-`runtime:3500` 只在 Compose 内部网络可见。TLS 隧道连接宿主的 `127.0.0.1:3500` 或按需要连接 `0.0.0.0:3500`。如果端口暴露到局域网，Deck 仍必须启用认证。
+`runtime:3500` 只在 Compose 默认网络可见。`web` 同时加入外部 `gateway`
+网络，gateway 反向代理通过 `${HUB_GATEWAY_ALIAS:-desk}:8080` 访问它并负责公网
+TLS 入口。WebSocket Upgrade 必须由 gateway 保留，Deck 认证仍必须启用。
 
 ## 10. 运行与安全原则
 

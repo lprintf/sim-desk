@@ -15,6 +15,21 @@ RUN case "$MIRROR" in \
 COPY frontend/ ./
 RUN npm run build
 
+FROM node:${NODE_VERSION}-bookworm-slim AS frontend-dev
+ARG MIRROR=official
+WORKDIR /app/frontend
+COPY frontend/package.json frontend/package-lock.json ./
+RUN case "$MIRROR" in \
+      official) npm_registry="https://registry.npmjs.org" ;; \
+      tencent) npm_registry="https://mirrors.cloud.tencent.com/npm/" ;; \
+      aliyun) npm_registry="https://registry.npmmirror.com" ;; \
+      *) echo "Unsupported MIRROR: $MIRROR (expected official, tencent, or aliyun)" >&2; exit 2 ;; \
+    esac && \
+    npm config set registry "$npm_registry" && \
+    npm ci
+EXPOSE 3000
+CMD ["npm", "run", "dev", "--", "--hostname", "0.0.0.0"]
+
 FROM node:${NODE_VERSION}-bookworm-slim AS server-deps
 ARG MIRROR=official
 WORKDIR /build
@@ -112,6 +127,7 @@ RUN case "$MIRROR" in \
         "@openai/codex@${CODEX_VERSION}" \
         "@playwright/mcp@${PLAYWRIGHT_MCP_VERSION}" \
         "playwright@${PLAYWRIGHT_VERSION}" \
+    && mv /usr/local/bin/codex /usr/local/bin/codex-real \
     && if [ -n "$playwright_download_host" ]; then \
          PLAYWRIGHT_DOWNLOAD_HOST="$playwright_download_host" playwright install --with-deps chromium; \
        else \
@@ -145,8 +161,10 @@ COPY --from=server-deps --chown=codex:codex /build/node_modules/ ./node_modules/
 COPY --chown=codex:codex server/ ./server/
 COPY --from=frontend-build --chown=codex:codex /build/frontend/out/ ./frontend/out/
 COPY --chown=codex:codex docker/codex-config.defaults.toml ./defaults/config.toml
+COPY docker/codex-wrapper.sh /usr/local/bin/codex
 COPY --chown=codex:codex docker/entrypoint.sh /usr/local/bin/sim-desk-entrypoint
-RUN chmod 0755 /usr/local/bin/sim-desk-entrypoint
+RUN chmod 0755 /usr/local/bin/codex /usr/local/bin/sim-desk-entrypoint \
+    && codex --version
 
 USER codex
 EXPOSE 3500

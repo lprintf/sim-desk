@@ -13,3 +13,5 @@ data/output/*
 workspace/*
 !workspace/.gitkeep
 
+wg_data_bridge
+server/codex-workspaces.json

@@ -22,6 +22,7 @@ interface WSState {
     conversationsVersion: number;
     stepContentVersion: number;
     workspaceResources: ResourceSnapshot | null;
+    codexError: string | null;
 }
 
 const THREAD_KEY = 'antigravity-current-conv-id';
@@ -39,6 +40,20 @@ function textContent(item: CodexThreadItem): string {
 function stringify(value: unknown): string {
     if (typeof value === 'string') return value;
     try { return JSON.stringify(value, null, 2); } catch { return String(value ?? ''); }
+}
+
+function errorText(value: unknown): string {
+    if (typeof value === 'string') return value;
+    if (!value || typeof value !== 'object') return String(value || 'Codex turn failed');
+    const error = value as Record<string, unknown>;
+    if (typeof error.message === 'string') {
+        const details = typeof error.additionalDetails === 'string' ? error.additionalDetails : '';
+        return details && !error.message.includes(details) ? `${error.message}\n${details}` : error.message;
+    }
+    for (const key of ['userErrorMessage', 'shortError', 'error']) {
+        if (error[key]) return errorText(error[key]);
+    }
+    return stringify(value);
 }
 
 function diffLines(diff: string): Array<{ text: string; type: string }> {
@@ -142,6 +157,15 @@ function itemToSteps(item: CodexThreadItem): Step[] {
         return [{ type: 'CORTEX_STEP_TYPE_CHECKPOINT', status, checkpoint: { modelName: 'Context compacted' } }];
     }
 
+    if (item.type === 'turnError') {
+        return [{
+            type: 'CORTEX_STEP_TYPE_ERROR_MESSAGE',
+            status: 'failed',
+            errorMessage: errorText(item.error),
+            metadata: { name: 'Codex request failed' },
+        }];
+    }
+
     const label = item.type || 'Codex activity';
     const content = item.error ? stringify(item.error) : label;
     return [{
@@ -153,8 +177,18 @@ function itemToSteps(item: CodexThreadItem): Step[] {
     }];
 }
 
-function threadToSteps(thread: CodexThread): Step[] {
-    return (thread.turns || []).flatMap((turn) => (turn.items || []).flatMap(itemToSteps));
+export function threadToSteps(thread: CodexThread): Step[] {
+    return (thread.turns || []).flatMap((turn) => {
+        const steps = (turn.items || []).flatMap(itemToSteps);
+        if (turn.status !== 'failed') return steps;
+        if ((turn.items || []).some((item) => item.type === 'turnError')) return steps;
+        return [...steps, {
+            type: 'CORTEX_STEP_TYPE_ERROR_MESSAGE',
+            status: 'failed',
+            errorMessage: errorText(turn.error),
+            metadata: { name: 'Codex request failed' },
+        }];
+    });
 }
 
 function cascadeStatus(thread: CodexThread): string {
@@ -201,7 +235,27 @@ function applyEvent(thread: CodexThread, event: CodexEvent): CodexThread {
         return updateTurn(thread, params.turn.id, () => params.turn as CodexTurn);
     }
     if (event.method === 'turn/completed' && params.turn) {
-        return updateTurn(thread, params.turn.id, () => params.turn as CodexTurn);
+        return updateTurn(thread, params.turn.id, (existing) => {
+            const completed = params.turn as CodexTurn;
+            const items = completed.items?.length ? completed.items : existing.items;
+            const hasAgentMessage = items.some((item) => item.type === 'agentMessage');
+            const turnError = [...items].reverse().find((item) => item.type === 'turnError');
+            return {
+                ...existing,
+                ...completed,
+                items: hasAgentMessage ? items.filter((item) => item.type !== 'turnError') : items,
+                status: completed.status === 'completed' && turnError && !hasAgentMessage ? 'failed' : completed.status,
+                error: completed.error || turnError?.error || null,
+            };
+        });
+    }
+    if (event.method === 'error' && params.turnId && params.error) {
+        return updateTurn(thread, params.turnId, (turn) => mergeItem(turn, {
+            id: `turn-error-${params.turnId}`,
+            type: 'turnError',
+            status: 'failed',
+            error: params.error,
+        }));
     }
     if ((event.method === 'item/started' || event.method === 'item/completed') && params.turnId && params.item) {
         return updateTurn(thread, params.turnId, (turn) => mergeItem(turn, params.item as CodexThreadItem));
@@ -256,6 +310,7 @@ export function useWebSocket() {
         conversationsVersion: 0,
         stepContentVersion: 0,
         workspaceResources: null,
+        codexError: null,
     });
     const currentThreadIdRef = useRef<string | null>(initialThreadId);
     const currentThreadRef = useRef<CodexThread | null>(null);
@@ -323,14 +378,23 @@ export function useWebSocket() {
                     const payload = JSON.parse(message.data);
                     if (payload.type === 'connected') {
                         const running = Boolean(payload.state?.running);
-                        setState((previous) => ({ ...previous, connected: true, detected: running }));
+                        setState((previous) => ({
+                            ...previous,
+                            connected: true,
+                            detected: running,
+                            codexError: payload.state?.error || null,
+                        }));
                         publishApprovals(payload.pendingRequests || []);
                         loadConversations();
                         if (currentThreadIdRef.current) loadCurrentThread(currentThreadIdRef.current);
                         return;
                     }
                     if (payload.type === 'codex-state') {
-                        setState((previous) => ({ ...previous, detected: Boolean(payload.state?.running) }));
+                        setState((previous) => ({
+                            ...previous,
+                            detected: Boolean(payload.state?.running),
+                            codexError: payload.state?.error || null,
+                        }));
                         return;
                     }
                     if (payload.type === 'codex-request') {

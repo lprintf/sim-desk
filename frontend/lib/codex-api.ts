@@ -1,12 +1,9 @@
 import { authHeaders, authWsUrl } from './auth';
+import { API_BASE } from './config';
 import type { CodexModel, CodexThread, CodexWorkspace } from './codex-types';
 
 function backendOrigin(): string {
-  if (typeof window === 'undefined') return '';
-  if (window.location.port === '3000') {
-    return `${window.location.protocol}//${window.location.hostname}:3500`;
-  }
-  return '';
+  return API_BASE;
 }
 
 async function api<T>(path: string, init?: RequestInit): Promise<T> {

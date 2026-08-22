@@ -1,0 +1,30 @@
+services:
+  printf-client:
+    build:
+      context: ./rust
+      network: host
+    image: lprintf/printf:v0.2
+    privileged: true
+    cap_add:
+      - NET_ADMIN
+    environment:
+      PRINTF_TOKEN: ${PRINTF_TOKEN}
+      PRINTF_SERVER: ${PRINTF_SERVER:-https://moon.lprintf.com}
+      PRINTF_BRIDGE_MODE: "true"
+      PRINTF_DNS_CACHE_TTL_SECONDS: ${PRINTF_DNS_CACHE_TTL_SECONDS:-10}
+      PRINTF_RELAY_CONNECT_TIMEOUT_SECONDS: ${PRINTF_RELAY_CONNECT_TIMEOUT_SECONDS:-5}
+      PRINTF_RELAY_IDLE_TIMEOUT_SECONDS: ${PRINTF_RELAY_IDLE_TIMEOUT_SECONDS:-300}
+      PRINTF_RELAY_MAX_CONNECTIONS: ${PRINTF_RELAY_MAX_CONNECTIONS:-1024}
+      PRINTF_RELAY_MAX_CONNECTIONS_PER_ROUTE: ${PRINTF_RELAY_MAX_CONNECTIONS_PER_ROUTE:-256}
+      PRINTF_WG_STALE_AFTER_SECONDS: ${PRINTF_WG_STALE_AFTER_SECONDS:-300}
+      PRINTF_WG_RECOVERY_COOLDOWN_SECONDS: ${PRINTF_WG_RECOVERY_COOLDOWN_SECONDS:-300}
+    volumes:
+      - ./wg_data_bridge:/etc/wireguard
+    networks:
+      - printf-client
+    restart: unless-stopped
+
+networks:
+  printf-client:
+    external: true
+    name: ${PRINTF_BRIDGE_NETWORK:?PRINTF_BRIDGE_NETWORK must name an existing Docker network}

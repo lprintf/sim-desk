@@ -5,10 +5,11 @@
   "main": "server/index.js",
   "scripts": {
     "start": "node server/index.js",
-    "dev": "npx concurrently -n BE,FE -c cyan,magenta \"node --watch server/index.js --port 3500 --no-auth\" \"npm run dev --prefix frontend\"",
+    "dev": "npx concurrently -n BE,FE -c cyan,magenta \"node --watch server/index.js --port 3510 --no-auth\" \"npm run dev --prefix frontend\"",
     "build:frontend": "npm run build --prefix frontend",
     "setup": "npm ci && npm ci --prefix frontend && npm run build:frontend",
     "check": "node --check server/index.js && node --check server/codex/app-server-client.js && node --check server/codex/routes.js && node --check server/codex/deck-compat.js && node --check server/codex/session-activity.js && node --check server/codex/workspace-store.js && node --check server/codex/workspace-tools.js && node --check server/codex/shell-session-manager.js",
+    "test": "node --test server/codex/*.test.js",
     "test:activity": "node --test server/codex/session-activity.test.js"
   },
   "dependencies": {

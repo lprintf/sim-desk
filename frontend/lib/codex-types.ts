@@ -38,7 +38,7 @@ export interface CodexTurn {
   id: string;
   items: CodexThreadItem[];
   status: 'completed' | 'interrupted' | 'failed' | 'inProgress';
-  error?: { message: string } | null;
+  error?: unknown;
   startedAt?: number | null;
   completedAt?: number | null;
   durationMs?: number | null;

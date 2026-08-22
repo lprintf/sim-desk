@@ -5,7 +5,7 @@ import { extractStepContent, getStepConfig } from '@/lib/step-utils';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
-import { ChevronRight, Wrench } from 'lucide-react';
+import { AlertCircle, ChevronRight, Wrench } from 'lucide-react';
 import { StepIcon } from '../ui/step-icon';
 import { cn } from '@/lib/utils';
 import { WaitingStep } from './waiting-step';
@@ -23,9 +23,10 @@ export const ProcessingGroup = memo(function ProcessingGroup({ steps: groupSteps
     const [expanded, setExpanded] = useState(false);
 
     // Separate WAITING steps that should be shown prominently
-    const { waitingSteps, codeAckSteps, normalSteps } = useMemo(() => {
+    const { waitingSteps, codeAckSteps, errorSteps, normalSteps } = useMemo(() => {
         const waiting: typeof groupSteps = [];
         const codeAck: typeof groupSteps = [];
+        const errors: typeof groupSteps = [];
         const normal: typeof groupSteps = [];
         for (const item of groupSteps) {
             // Handle both string status (JSON) and integer status (binary-decoded cache)
@@ -35,6 +36,8 @@ export const ProcessingGroup = memo(function ProcessingGroup({ steps: groupSteps
             const isStale = isWaiting && totalStepCount > 0 && item.originalIndex < totalStepCount - 1;
             if (isWaiting && !isStale) {
                 waiting.push(item);
+            } else if (getStepConfig(item.step.type).role === 'error') {
+                errors.push(item);
             } else if (
                 (item.step.type === 'CORTEX_STEP_TYPE_CODE_ACKNOWLEDGEMENT' || item.step.codeAcknowledgement) &&
                 item.step.codeAcknowledgement?.codeAcknowledgementInfos?.some(info => info.diff?.lines?.length)
@@ -44,7 +47,7 @@ export const ProcessingGroup = memo(function ProcessingGroup({ steps: groupSteps
                 normal.push(item);
             }
         }
-        return { waitingSteps: waiting, codeAckSteps: codeAck, normalSteps: normal };
+        return { waitingSteps: waiting, codeAckSteps: codeAck, errorSteps: errors, normalSteps: normal };
     }, [groupSteps, totalStepCount]);
 
     const summary = useMemo(() => {
@@ -76,6 +79,23 @@ export const ProcessingGroup = memo(function ProcessingGroup({ steps: groupSteps
                         infos={step.codeAcknowledgement?.codeAcknowledgementInfos || []}
                         isAccept={step.codeAcknowledgement?.isAccept}
                     />
+                </div>
+            ))}
+
+            {errorSteps.map(({ step, originalIndex }) => (
+                <div
+                    key={`error-${originalIndex}`}
+                    role="alert"
+                    className="mb-3 mx-4 flex items-start gap-2.5 border border-red-500/30 bg-red-500/10 px-3 py-2.5 text-red-200 rounded-lg"
+                >
+                    <AlertCircle className="h-4 w-4 mt-0.5 shrink-0 text-red-400" />
+                    <div className="min-w-0 flex-1">
+                        <div className="text-xs font-semibold text-red-300">Codex request failed</div>
+                        <div className="mt-1 whitespace-pre-wrap break-words text-xs leading-relaxed">
+                            {extractStepContent(step) || 'Codex turn failed without an error message.'}
+                        </div>
+                    </div>
+                    <RawJsonViewer step={step} />
                 </div>
             ))}
 

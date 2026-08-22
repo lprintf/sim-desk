@@ -38,6 +38,7 @@ function setupCodexRoutes(app, { client, workspaces }) {
             threadId: req.params.threadId,
             includeTurns: true,
         });
+        result.thread = client.decorateThread(result.thread);
         workspaces.resolve(result.thread.cwd);
         res.json(result);
     }));

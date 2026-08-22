@@ -3,7 +3,7 @@
 // No proxy, no CORS, no port discovery needed.
 
 export const API_BASE = typeof window !== 'undefined' && window.location.port === '3000'
-    ? `${window.location.protocol}//${window.location.hostname}:3500`
+    ? `${window.location.protocol}//${window.location.hostname}:3510`
     : '';
 
 // WS URL — same host/port as the page, just switch protocol
@@ -13,7 +13,7 @@ export function getWsUrl(): Promise<string> {
     if (_wsUrl) return Promise.resolve(_wsUrl);
 
     const isBrowser = typeof window !== 'undefined';
-    if (!isBrowser) return Promise.resolve('ws://localhost:3500');
+    if (!isBrowser) return Promise.resolve('ws://localhost:3510');
 
     const loc = API_BASE ? new URL(API_BASE) : window.location;
     const proto = loc.protocol === 'https:' ? 'wss' : 'ws';
