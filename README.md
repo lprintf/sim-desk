@@ -2,6 +2,8 @@
 
 Sim Desk 是一个 Compose 原生的 Codex 移动开发工作台。它复用经过验证的 Deck 桌面端和手机端界面，但把 Ubuntu 容器定义为唯一执行环境，因此部署不依赖宿主系统的 Shell、浏览器或开发工具。
 
+也可以直接在本机运行，不使用 Docker。此模式调用本机的 Codex CLI 和现有登录配置，不安装 Sim Desk 自带的 Playwright/Chromium；服务仅监听 `127.0.0.1`。
+
 ## 服务
 
 - `web`：Nginx 静态前端和 `/api`、`/ws` 反向代理，唯一对外暴露的服务。
@@ -157,3 +159,23 @@ docker compose up -d
 ```
 
 完整设计和边界见 [容器架构](docs/container-architecture.md)。
+
+## 本机运行（不使用 Docker）
+
+要求：Node.js 22、npm、Git，以及已安装并登录的 Codex CLI。Linux 上安装 `node-pty` 还需要 Python 3、`make` 和 C/C++ 编译器（例如 `build-essential`）。
+
+在项目目录安装依赖并构建前端：
+
+```bash
+npm run setup
+```
+
+确认本机 Codex CLI 可用；如果尚未登录，先运行 `codex login`。然后启动：
+
+```bash
+npm run start:local
+```
+
+访问 <http://127.0.0.1:3500>。本地模式直接从当前环境的 `PATH` 查找 `codex`，并继承当前用户的 Codex 配置、认证和 `CODEX_HOME`；如可执行文件不在 `PATH` 中，可设置 `CODEX_BIN`。默认工作区是启动命令所在目录，工作区状态保存在 `~/.sim-desk`。可通过 `CODEX_WORKSPACE_ROOTS` 指定允许访问的根目录。
+
+本地模式不会创建或覆盖 `~/.codex/config.toml`，也不会安装浏览器。若本机 Codex 配置已经自行添加了浏览器 MCP，它仍按本机配置生效。只允许本机访问；需要从手机或其他设备访问时，请使用 Docker 部署或自行配置受认证保护的网络入口。

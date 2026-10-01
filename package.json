@@ -5,6 +5,7 @@
   "main": "server/index.js",
   "scripts": {
     "start": "node server/index.js",
+    "start:local": "node server/index.js --local",
     "dev": "npx concurrently -n BE,FE -c cyan,magenta \"node --watch server/index.js --port 3510 --no-auth\" \"npm run dev --prefix frontend\"",
     "build:frontend": "npm run build --prefix frontend",
     "setup": "npm ci && npm ci --prefix frontend && npm run build:frontend",

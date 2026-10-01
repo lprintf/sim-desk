@@ -2,6 +2,7 @@ const express = require('express');
 const http = require('http');
 const crypto = require('crypto');
 const fs = require('fs');
+const os = require('os');
 const path = require('path');
 const helmet = require('helmet');
 const { rateLimit } = require('express-rate-limit');
@@ -18,9 +19,15 @@ const server = http.createServer(app);
 const codexWss = new WebSocketServer({ noServer: true });
 const portArgIndex = process.argv.indexOf('--port');
 const PORT = Number(portArgIndex >= 0 ? process.argv[portArgIndex + 1] : process.env.PORT) || 3500;
-const HOST = process.env.HOST || '0.0.0.0';
+const localMode = process.argv.includes('--local');
+const HOST = localMode ? '127.0.0.1' : (process.env.HOST || '0.0.0.0');
 const noAuth = process.argv.includes('--no-auth');
 const AUTH_KEY = noAuth ? '' : (process.env.AUTH_KEY || '');
+if (localMode) {
+    process.env.DECK_DATA_DIR ||= path.join(os.homedir(), '.sim-desk');
+    process.env.CODEX_WORKSPACE_ROOTS ||= process.cwd();
+    process.env.SIM_DESK_INITIAL_WORKSPACE ||= process.cwd();
+}
 const client = new CodexAppServerClient();
 const workspaces = new WorkspaceStore(__dirname);
 const deckShell = shellProfile();
