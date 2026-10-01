@@ -176,6 +176,28 @@ npm run setup
 npm run start:local
 ```
 
+如需关闭终端后继续运行，可在项目目录后台启动：
+
+```bash
+mkdir -p ~/.local/state/sim-desk
+nohup node server/index.js --local > ~/.local/state/sim-desk/server.log 2>&1 < /dev/null &
+echo $! > ~/.local/state/sim-desk/server.pid
+```
+
+查看日志：
+
+```bash
+tail -f ~/.local/state/sim-desk/server.log
+```
+
+停止服务：
+
+```bash
+kill "$(cat ~/.local/state/sim-desk/server.pid)"
+```
+
+`nohup` 只保证进程不随终端关闭，不会在系统重启后自动启动；如需开机自启，请配置 systemd 用户服务。
+
 访问 <http://127.0.0.1:3500>。本地模式直接从当前环境的 `PATH` 查找 `codex`，并继承当前用户的 Codex 配置、认证和 `CODEX_HOME`；如可执行文件不在 `PATH` 中，可设置 `CODEX_BIN`。默认工作区是启动命令所在目录，工作区状态保存在 `~/.sim-desk`。可通过 `CODEX_WORKSPACE_ROOTS` 指定允许访问的根目录。
 
 本地模式不会创建或覆盖 `~/.codex/config.toml`，也不会安装浏览器。若本机 Codex 配置已经自行添加了浏览器 MCP，它仍按本机配置生效。只允许本机访问；需要从手机或其他设备访问时，请使用 Docker 部署或自行配置受认证保护的网络入口。
