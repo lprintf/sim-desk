@@ -189,6 +189,15 @@ function setupDeckCompatRoutes(app, { client, workspaces, runtimeSettings }) {
             quota: 1,
         }));
         const preferred = runtimeSettings.defaultModel;
+        if (preferred && !models.some((model) => model.modelId === preferred)) {
+            models.push({
+                label: preferred,
+                modelId: preferred,
+                supportsImages: true,
+                isRecommended: false,
+                quota: 1,
+            });
+        }
         const fallback = (result.data || []).find((model) => model.isDefault);
         res.json({ models, defaultModel: preferred || fallback?.model || fallback?.id || models[0]?.modelId || '' });
     }));

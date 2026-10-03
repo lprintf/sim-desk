@@ -4,6 +4,7 @@ import { useState, useRef, useCallback, useEffect, useMemo } from 'react';
 import { Step } from '@/lib/types';
 import { extractStepContent, getStepConfig } from '@/lib/step-utils';
 import { cascadeSend, cascadeSubmit, cascadeCancel, getWorkspaces, getModels, getAutoAcceptState, setAutoAcceptState, getAutoContinueState, setAutoContinueState, saveMedia, clearConversationCache, fetchWorkflows } from '@/lib/cascade-api';
+import { stopCodexAppServer } from '@/lib/cascade-api';
 import type { Workspace, CascadeModel, MediaItem, WorkflowItem } from '@/lib/cascade-api';
 import { API_BASE } from '@/lib/config';
 import { authHeaders } from '@/lib/auth';
@@ -23,7 +24,7 @@ import {
     DropdownMenuSeparator,
     DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { AlertCircle, Settings, Folder, Zap, BarChart2, RefreshCcw, SendHorizontal, Square, Paperclip, GitBranch, Terminal, Plus, X, ChevronDown, Activity, Download, Bell, BellOff, Rocket, ArrowDown as ArrowDownIcon, Camera, Brain, Image as ImageIcon, Star } from 'lucide-react';
+import { AlertCircle, Settings, Folder, Zap, BarChart2, RefreshCcw, SendHorizontal, Square, Paperclip, GitBranch, Terminal, Plus, X, ChevronDown, Activity, Download, Bell, BellOff, Rocket, ArrowDown as ArrowDownIcon, Camera, Brain, Image as ImageIcon, Star, Power } from 'lucide-react';
 import { Switch } from '@/components/ui/switch';
 import { notificationService, NOTIFICATION_SETTINGS_CHANGED } from '@/lib/notifications';
 
@@ -429,6 +430,15 @@ export function ChatView({ steps, baseIndex = 0, stepCount = 0, loadingOlder = f
         try { await cascadeCancel(activeCascadeId); } catch (e) { console.error('Cancel error:', e); }
     }, [activeCascadeId]);
 
+    const handleStopCodex = useCallback(async () => {
+        try {
+            await stopCodexAppServer();
+            window.dispatchEvent(new CustomEvent('refresh-conversation'));
+        } catch (e) {
+            console.error('Stop Codex error:', e);
+        }
+    }, []);
+
     // New chat
     const handleNewChat = useCallback(() => {
         setLocalCascadeId(null);
@@ -803,6 +813,14 @@ export function ChatView({ steps, baseIndex = 0, stepCount = 0, loadingOlder = f
                                         >
                                             <RefreshCcw className="w-3.5 h-3.5 mr-2" />
                                             Refresh Chat
+                                        </DropdownMenuItem>
+                                        <DropdownMenuSeparator className="bg-white/5" />
+                                        <DropdownMenuItem
+                                            onClick={handleStopCodex}
+                                            className="cursor-pointer text-red-400/90 focus:text-red-400"
+                                        >
+                                            <Power className="w-3.5 h-3.5 mr-2" />
+                                            Stop Codex Session
                                         </DropdownMenuItem>
                                     </DropdownMenuContent>
                                 </DropdownMenu>

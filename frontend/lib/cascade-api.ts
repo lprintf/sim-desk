@@ -239,6 +239,20 @@ export async function cascadeCancel(cascadeId: string): Promise<object> {
     return res.json();
 }
 
+// Stop the Codex app-server to release all session locks
+export async function stopCodexAppServer(): Promise<{ stopped: boolean }> {
+    const res = await fetch(`${API_BASE}/api/codex/app-server/stop`, { method: 'POST', headers: authHeaders() });
+    if (!res.ok) throw new Error(`Stop failed: ${res.status}`);
+    return res.json();
+}
+
+// Restart the Codex app-server
+export async function restartCodexAppServer(): Promise<{ running: boolean }> {
+    const res = await fetch(`${API_BASE}/api/codex/app-server/restart`, { method: 'POST', headers: authHeaders() });
+    if (!res.ok) throw new Error(`Restart failed: ${res.status}`);
+    return res.json();
+}
+
 // Accept or reject pending code changes
 export async function cascadeInteract(cascadeId: string, action: 'accept' | 'reject' = 'accept'): Promise<object> {
     const res = await fetch(`${API_BASE}/api/cascade/${cascadeId}/accept`, {

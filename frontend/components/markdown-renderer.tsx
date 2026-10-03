@@ -250,7 +250,6 @@ const MD_COMPONENTS = {
     },
     code({ className, children, node, ...props }: any) {
         const isBlock = className?.includes('hljs') || className?.includes('language-');
-        const language = className?.replace(/language-/, '').replace(/hljs\s*/, '') || '';
         if (!isBlock) {
             return <code className="inline-code" {...props}>{children}</code>;
         }
@@ -259,7 +258,6 @@ const MD_COMPONENTS = {
         const rawText = extractTextFromHast(node).replace(/\n$/, '');
         return (
             <div className="code-block-wrapper">
-                {language && <span className="code-lang-label">{language}</span>}
                 <CopyButton text={rawText} />
                 <code className={className} {...props}>{children}</code>
             </div>

@@ -389,20 +389,6 @@
   color: oklch(0.8 0 0);
 }
 
-/* Code block language label */
-.code-lang-label {
-  position: absolute;
-  top: 0.4em;
-  left: 0.8em;
-  font-size: 0.6rem;
-  font-family: var(--font-mono), monospace;
-  color: oklch(0.5 0 0);
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-  pointer-events: none;
-  user-select: none;
-}
-
 /* Message entrance animation */
 @keyframes message-in {
   from {

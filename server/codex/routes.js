@@ -3,6 +3,19 @@ function asyncRoute(handler) {
 }
 
 function setupCodexRoutes(app, { client, workspaces }) {
+    app.post('/api/codex/app-server/stop', (_req, res) => {
+        client.loadedThreads.clear();
+        client.stop();
+        res.json({ stopped: true });
+    });
+
+    app.post('/api/codex/app-server/restart', asyncRoute(async (_req, res) => {
+        client.loadedThreads.clear();
+        client.stop();
+        await client.start();
+        res.json({ running: client.running });
+    }));
+
     app.get('/api/codex/status', asyncRoute(async (_req, res) => {
         try {
             await client.start();

@@ -7,6 +7,19 @@ const path = require('path');
 const helmet = require('helmet');
 const { rateLimit } = require('express-rate-limit');
 const { WebSocketServer } = require('ws');
+
+// Load .env file in all modes (Docker sets vars via compose, local needs this)
+(function loadEnv(dotenvPath) {
+    if (!fs.existsSync(dotenvPath)) return;
+    fs.readFileSync(dotenvPath, 'utf8').split(/\r?\n/).forEach((line) => {
+        const cleaned = line.replace(/#.*$/, '').trim();
+        const match = cleaned.match(/^([^=]+?)\s*=\s*(['"]?)(.*?)\2$/);
+        if (match && !Object.prototype.hasOwnProperty.call(process.env, match[1])) {
+            process.env[match[1]] = match[3];
+        }
+    });
+})(path.join(__dirname, '..', '.env'));
+
 const { CodexAppServerClient } = require('./codex/app-server-client');
 const { WorkspaceStore } = require('./codex/workspace-store');
 const { setupCodexRoutes, setupCodexWebSocket } = require('./codex/routes');
@@ -20,9 +33,9 @@ const codexWss = new WebSocketServer({ noServer: true });
 const portArgIndex = process.argv.indexOf('--port');
 const PORT = Number(portArgIndex >= 0 ? process.argv[portArgIndex + 1] : process.env.PORT) || 3500;
 const localMode = process.argv.includes('--local');
-const HOST = localMode ? '127.0.0.1' : (process.env.HOST || '0.0.0.0');
+const HOST = process.env.HOST || (localMode ? '127.0.0.1' : '0.0.0.0');
 const noAuth = process.argv.includes('--no-auth');
-const AUTH_KEY = noAuth ? '' : (process.env.AUTH_KEY || '');
+const AUTH_KEY = noAuth ? '' : (process.env.AUTH_KEY || process.env.SIM_DESK_AUTH_KEY || '');
 if (localMode) {
     process.env.DECK_DATA_DIR ||= path.join(os.homedir(), '.sim-desk');
     process.env.CODEX_WORKSPACE_ROOTS ||= process.cwd();

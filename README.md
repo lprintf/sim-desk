@@ -179,9 +179,12 @@ npm run start:local
 如需关闭终端后继续运行，可在项目目录后台启动：
 
 ```bash
+cd ~/wsp/sim-desk
 mkdir -p ~/.local/state/sim-desk
-nohup node server/index.js --local > ~/.local/state/sim-desk/server.log 2>&1 < /dev/null &
-echo $! > ~/.local/state/sim-desk/server.pid
+(
+    nohup node server/index.js --local > ~/.local/state/sim-desk/server.log 2>&1 < /dev/null & \
+    echo $! > ~/.local/state/sim-desk/server.pid
+)
 ```
 
 查看日志：
